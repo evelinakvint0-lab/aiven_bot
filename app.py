@@ -15,18 +15,27 @@ if not BOT_TOKEN:
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
-# Этот блок отвечает, когда пишут ЛИЧНО боту
+# Этот обработчик ловит обычные сообщения боту
 @dp.message()
 async def echo(message):
     await message.answer("Приветствую вас, сударыня! Я Айвен, ваш покорный слуга. Чем могу быть полезен?")
 
-# А этот блок отвечает, когда пишут ВАМ (в режиме секретаря)
+# Этот обработчик ловит сообщения в режиме секретаря
 @dp.business_message()
 async def business_echo(message):
-    await message.answer("Добрый день! Я цифровой дворецкий Эвелины. К сожалению, сударыня сейчас занята. Я обязательно передам ей ваше сообщение. Чем еще могу быть полезен?")
+    await message.answer("Добрый день! Я цифровой дворецкий Эвелины. К сожалению, сударыня сейчас занята. Я обязательно передам ей ваше сообщение.")
+
+# Этот обработчик нужен, чтобы видеть в логах, что бот подключился как секретарь
+@dp.business_connection()
+async def on_business_connection(connection):
+    logging.info(f"Бизнес-соединение установлено! ID: {connection.id}")
 
 async def on_startup(bot: Bot):
-    await bot.set_webhook(f"{BASE_URL}{WEBHOOK_PATH}")
+    # ВАЖНО: Явно указываем, какие типы сообщений мы хотим получать
+    await bot.set_webhook(
+        f"{BASE_URL}{WEBHOOK_PATH}",
+        allowed_updates=["message", "business_connection", "business_message"]
+    )
     logging.info(f"Вебхук установлен на {BASE_URL}{WEBHOOK_PATH}")
 
 async def health_check(request):
