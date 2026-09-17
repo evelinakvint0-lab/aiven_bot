@@ -4,13 +4,9 @@ from aiohttp import web
 from aiogram import Bot, Dispatcher
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 
-# Включаем логирование, чтобы видеть ошибки в Render
 logging.basicConfig(level=logging.INFO)
-
-# Токен берем из переменных окружения Render
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 WEBHOOK_PATH = "/webhook"
-# Render сам подставляет свой адрес в эту переменную
 BASE_URL = os.getenv("RENDER_EXTERNAL_URL")
 
 if not BOT_TOKEN:
@@ -21,16 +17,18 @@ dp = Dispatcher()
 
 @dp.message()
 async def echo(message):
-    # Здесь Айвен отвечает в стиле дворецкого
     await message.answer("Приветствую вас, сударыня! Я Айвен, ваш покорный слуга. Чем могу быть полезен?")
 
 async def on_startup(bot: Bot):
-    # Устанавливаем вебхук при запуске
     await bot.set_webhook(f"{BASE_URL}{WEBHOOK_PATH}")
     logging.info(f"Вебхук установлен на {BASE_URL}{WEBHOOK_PATH}")
 
+async def health_check(request):
+    return web.Response(text="OK")
+
 def main():
     app = web.Application()
+    app.router.add_get("/", health_check)
     webhook_handler = SimpleRequestHandler(dispatcher=dp, bot=bot)
     webhook_handler.register(app, path=WEBHOOK_PATH)
     setup_application(app, dp, bot=bot)
