@@ -15,9 +15,15 @@ if not BOT_TOKEN:
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
 
+# Этот блок отвечает, когда пишут ЛИЧНО боту
 @dp.message()
 async def echo(message):
     await message.answer("Приветствую вас, сударыня! Я Айвен, ваш покорный слуга. Чем могу быть полезен?")
+
+# А этот блок отвечает, когда пишут ВАМ (в режиме секретаря)
+@dp.business_message()
+async def business_echo(message):
+    await message.answer("Добрый день! Я цифровой дворецкий Эвелины. К сожалению, сударыня сейчас занята. Я обязательно передам ей ваше сообщение. Чем еще могу быть полезен?")
 
 async def on_startup(bot: Bot):
     await bot.set_webhook(f"{BASE_URL}{WEBHOOK_PATH}")
