@@ -22,7 +22,7 @@ if not GEMINI_API_KEY:
 
 # Настраиваем "мозг" Айвена
 genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel('gemini-2.5-flash')
+model = genai.GenerativeModel('gemini-3.5-flash')
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
