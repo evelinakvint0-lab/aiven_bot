@@ -5,25 +5,49 @@ from aiogram import Bot, Dispatcher
 from aiogram.filters import Command, CommandStart
 from aiogram.enums import ChatType
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
+import google.generativeai as genai
 
 logging.basicConfig(level=logging.INFO)
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OWNER_ID = int(os.getenv("OWNER_ID", 0))
 WEBHOOK_PATH = "/webhook"
 BASE_URL = os.getenv("RENDER_EXTERNAL_URL")
 
 if not BOT_TOKEN:
     raise ValueError("Токен BOT_TOKEN не найден!")
+if not GEMINI_API_KEY:
+    raise ValueError("Ключ GEMINI_API_KEY не найден!")
+
+# Настраиваем "мозг" Айвена
+genai.configure(api_key=GEMINI_API_KEY)
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 bot = Bot(token=BOT_TOKEN)
 dp = Dispatcher()
+
+# Функция для общения с нейросетью
+async def ask_aiiven(prompt: str, context: str = "") -> str:
+    system_instruction = (
+        "Ты — Айвен, цифровой дворецкий Эвелины. Ты прибыл из XVIII века и теперь живешь в Telegram. "
+        "Общайся вежливо, галантно, используй обращения 'сударыня', 'госпожа'. "
+        "Будь остроумным, но почтительным. Не используй современный сленг. "
+    )
+    full_prompt = f"{system_instruction}\n\n{context}\n\nСообщение: {prompt}\nОтвет Айвена:"
+    
+    try:
+        response = await model.generate_content_async(full_prompt)
+        return response.text
+    except Exception as e:
+        logging.error(f"Ошибка нейросети: {e}")
+        return "Прошу прощения, сударыня, мои мыслительные процессы дали сбой. Извольте повторить чуть позже."
 
 # --- КОМАНДЫ ДЛЯ ЛИЧНОГО ЧАТА С БОТОМ ---
 
 @dp.message(CommandStart())
 async def cmd_start(message):
-    await message.answer("Приветствую вас, сударыня! Я Айвен, ваш покорный слуга.")
+    await message.answer("Приветствую вас, сударыня! Я Айвен, ваш покорный слуга. Теперь мой разум стал острее, и я готов к любым беседам!")
 
 @dp.message(Command("help"))
 async def cmd_help(message):
@@ -31,22 +55,24 @@ async def cmd_help(message):
         "Вот что я умею, сударыня:\n\n"
         "/start - Начать беседу\n"
         "/help - Показать этот список\n"
-        "/notes - Мои записи\n"
-        "/myid - Узнать свой Telegram ID\n"
+        "/myid - Узнать свой Telegram ID\n\n"
+        "А ещё я теперь умею поддерживать любую беседу благодаря нейросети!"
     )
     await message.answer(help_text)
-
-@dp.message(Command("notes"))
-async def cmd_notes(message):
-    await message.answer("Ваши записи пусты, сударыня.")
 
 @dp.message(Command("myid"))
 async def cmd_myid(message):
     await message.answer(f"Ваш Telegram ID: {message.from_user.id}")
 
+# Обработчик всех текстовых сообщений боту
 @dp.message()
 async def echo(message):
-    await message.answer("Приветствую вас, сударыня! Я Айвен, ваш покорный слуга.")
+    if not message.text:
+        return
+        
+    # Отправляем сообщение в нейросеть
+    response_text = await ask_aiiven(message.text)
+    await message.answer(response_text)
 
 # --- РЕЖИМ СЕКРЕТАРЯ (TELEGRAM BUSINESS) ---
 
@@ -56,27 +82,23 @@ async def business_echo(message):
     if OWNER_ID != 0 and message.from_user.id == OWNER_ID:
         return
     
-    # 2. Если сообщение пришло из группы или канала — молчим (не лезем)
+    # 2. Если сообщение пришло из группы — молчим
     if message.chat.type in (ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL):
-        logging.info("Сообщение из группы. Молчим.")
         return
     
-    # 3. Отвечаем собеседнику вашим красивым текстом
-    text_for_guest = (
-        "Создатель сейчас отсутствует. Но не извольте беспокоиться, "
-        "ваше сообщение будет доставлено в целости и сохранности. "
-        "С глубочайшим почтением, ваш Айвен."
-    )
-    await message.answer(text_for_guest)
-    
-    # 4. Пересылаем уведомление ВАМ в личку бота
-    if OWNER_ID != 0:
-        sender_name = message.from_user.full_name
-        notification = f"📩 Сударыня, вам новое сообщение от {sender_name}:\n\n«{message.text}»"
-        try:
-            await bot.send_message(chat_id=OWNER_ID, text=notification)
-        except Exception as e:
-            logging.error(f"Не удалось отправить уведомление: {e}")
+    # 3. Если это текст, генерируем ответ через нейросеть
+    if message.text:
+        context = f"Тебе пишет {message.from_user.full_name}. Ты отвечаешь от лица секретаря Эвелины."
+        ai_response = await ask_aiiven(message.text, context)
+        await message.answer(ai_response)
+        
+        # 4. Пересылаем уведомление ВАМ в личку бота
+        if OWNER_ID != 0:
+            notification = f"📩 Сударыня, вам новое сообщение от {message.from_user.full_name}:\n\n«{message.text}»\n\nМой ответ: {ai_response}"
+            try:
+                await bot.send_message(chat_id=OWNER_ID, text=notification)
+            except Exception as e:
+                logging.error(f"Не удалось отправить уведомление: {e}")
 
 # --- СЛУЖЕБНЫЕ ФУНКЦИИ ---
 
