@@ -1,4 +1,3 @@
-aiogram==3.22.0
-aiohttp==3.11.13
-python-dotenv==1.2.1
-google-generativeai
+aiogram>=3.13,<4
+aiohttp>=3.9
+google-genai>=0.3
