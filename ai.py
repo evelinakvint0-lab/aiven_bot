@@ -9,7 +9,7 @@ from prompts import CHARACTER_PROMPT
 from storage import get_key, mutate
 
 client = genai.Client(api_key=config.gemini_key)
-MODEL = "gemini-2.5-flash"
+MODEL = "gemini-3.8-flash"
 
 
 def _build_contents(history: list, user_text: str) -> list:
