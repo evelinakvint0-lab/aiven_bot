@@ -8,8 +8,11 @@ from config import config
 from prompts import CHARACTER_PROMPT
 from storage import get_key, mutate
 
-client = genai.Client(api_key=config.gemini_key)
-MODEL = "gemini-3.6-flash"
+client = genai.Client(
+    api_key=config.gemini_key,
+    http_options={'retry_options': {'attempts': 5, 'initial_delay': 2.0, 'max_delay': 20.0}}
+)
+MODEL = "gemini-1.5-flash"
 
 
 def _build_contents(history: list, user_text: str) -> list:
