@@ -46,7 +46,7 @@ async def ask_aiiven(prompt: str, context: str = "") -> str:
                 contents=_build_contents(history, user_text),
                 config=types.GenerateContentConfig(
                     system_instruction=CHARACTER_PROMPT,
-                    temperature=1.0,
+                    temperature=0.85,
                     max_output_tokens=500,
                 ),
             ),
